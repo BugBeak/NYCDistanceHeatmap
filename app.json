@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "NYC Transit Visualizer",
+    "slug": "nyc-transit-visualizer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.nyctransitvisualizer",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to location to show your position on the map and calculate transit distances.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show your position on the map and calculate transit distances."
+      }
+    },
+    "android": {
+      "package": "com.yourname.nyctransitvisualizer",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow NYC Transit Visualizer to use your location to show transit distances."
+        }
+      ]
+    ]
+  }
+} 

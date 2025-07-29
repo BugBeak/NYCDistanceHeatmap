@@ -8,7 +8,6 @@ import ColorLegend from './components/ColorLegend';
 import LiveDataToggle from './components/LiveDataToggle';
 import ViewModeToggle from './components/ViewModeToggle';
 import { getColorForTravelTime } from './utils/ColorSchemes';
-import { Polygon } from 'react-native-maps';
 
 interface TransitPoint {
   latitude: number;
@@ -30,11 +29,8 @@ export default function App() {
   const [zoomLevel, setZoomLevel] = useState<number>(12);
   const [isHeatmapMode, setIsHeatmapMode] = useState<boolean>(false);
   const [currentMapRegion, setCurrentMapRegion] = useState<any>(null);
-  const [isochronePolygons, setIsochronePolygons] = useState<any[]>([]);
+  
   const transitService = useRef(new TransitDataService());
-  const [subwayInfluencePolygons, setSubwayInfluencePolygons] = useState<any[]>([]);
-  const [isSubwayInfluenceMode, setIsSubwayInfluenceMode] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(false);
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
@@ -68,40 +64,9 @@ export default function App() {
     }
   }, [currentMapRegion, isHeatmapMode]);
 
-  useEffect(() => {
-    if (isSubwayInfluenceMode && location) {
-      fetchSubwayInfluencePolygons(location.coords);
-      setTransitData({ points: [], lastUpdated: new Date() }); // <-- Add this line
-    }
-  }, [isSubwayInfluenceMode, location]);
-
-  const fetchSubwayInfluencePolygons = async (center) => {
-    // For each subway station, create a buffer polygon for its area of influence
-    const stations = TransitDataService.NYC_SUBWAY_STATIONS || [];
-    const polygons = [];
-    const walkingSpeedKmPerMin = 0.083;
-    const maxWalkMinutes = 30; // or any cutoff
-    const maxDistanceKm = walkingSpeedKmPerMin * maxWalkMinutes;
-
-    for (const station of stations) {
-      // Buffer in meters
-      const stationPoint = [station.longitude, station.latitude];
-      // Use turf.buffer and turf.intersect with NYC boundary
-      // Assume you have a helper in your service:
-      const poly = await TransitDataService.getStationInfluencePolygon(station, maxDistanceKm);
-      if (poly) {
-        polygons.push({
-          polygon: poly,
-          color: '#3399ff', // or color by station/line
-          stationName: station.name,
-        });
-      }
-    }
-    setSubwayInfluencePolygons(polygons);
-  };
   const fetchTransitData = async () => {
     if (!location) return;
-    setIsLoading(true); // Start loading
+
     try {
       // Update the service's live data setting
       transitService.current.setLiveDataEnabled(isLiveDataEnabled);
@@ -131,18 +96,10 @@ export default function App() {
           longitude: location.coords.longitude
         };
         
-        // data = await transitService.current.getAccessibilityHeatmapData(
-        //   heatmapCenter,
-        //   gridDensity
-        // );
-        const polygons = await transitService.current.getIsochronePolygons(
+        data = await transitService.current.getAccessibilityHeatmapData(
           heatmapCenter,
           gridDensity
         );
-        data = { points: [], lastUpdated: new Date() }; 
-        setTransitData({ points: [], lastUpdated: new Date() }); // You can keep this for legend/timestamp
-        setIsochronePolygons(polygons); 
-        
       } else {
         // Use subway stations data
         data = await transitService.current.getSubwayStationsData(
@@ -154,8 +111,6 @@ export default function App() {
     } catch (error) {
       console.error('Error fetching transit data:', error);
       Alert.alert('Error', 'Failed to fetch transit data');
-    } finally {
-      setIsLoading(false); // Stop loading
     }
   };
 
@@ -189,24 +144,6 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      {/* Loading banner */}
-      {isLoading && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: '#fff',
-          padding: 10,
-          zIndex: 10,
-          borderBottomWidth: 1,
-          borderBottomColor: '#3399ff'
-        }}>
-          <Text style={{ textAlign: 'center', fontWeight: 'bold', color: '#3399ff' }}>
-            Loading heatmap...
-          </Text>
-        </View>
-      )}
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -219,19 +156,6 @@ export default function App() {
         }}
         onRegionChangeComplete={handleRegionChange}
       >
-        {/* Subway area of influence polygons */}
-        {isSubwayInfluenceMode && subwayInfluencePolygons.map((poly, idx) => (
-          <Polygon
-            key={idx}
-            coordinates={poly.polygon.geometry.coordinates[0].map(([lng, lat]) => ({
-              latitude: lat,
-              longitude: lng,
-            }))}
-            fillColor={poly.color}
-            strokeColor={poly.color}
-            strokeWidth={1}
-          />
-        ))}
         {/* User location marker */}
         <Marker
           coordinate={{
@@ -286,9 +210,10 @@ export default function App() {
 
       <ViewModeToggle
         isHeatmapMode={isHeatmapMode}
-        isSubwayInfluenceMode={isSubwayInfluenceMode}
-        onToggleHeatmap={(isHeatmap) => setIsHeatmapMode(isHeatmap)}
-        onToggleSubwayInfluence={(isInfluence) => setIsSubwayInfluenceMode(isInfluence)}
+        onToggle={(isHeatmap) => {
+          console.log('View mode changed to:', isHeatmap ? 'Heatmap' : 'Stations');
+          setIsHeatmapMode(isHeatmap);
+        }}
       />
 
       <ColorLegend 
